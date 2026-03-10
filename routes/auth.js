@@ -1,24 +1,54 @@
 const express = require("express");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
-const nodemailer = require("nodemailer");
 const User = require("../models/User");
 const Device = require("../models/Device");
 const authenticateToken = require("../middleware/authenticateToken");
 
 const router = express.Router();
 
-const transporter = nodemailer.createTransport({
-  host: 'smtp.gmail.com',
-  port: 587,           // 👈 Change this from 465 to 587
-  secure: false,       // 👈 MUST be false for port 587
-  requireTLS: true,    // 👈 This forces the connection to become secure
-  auth: {
-    user: process.env.EMAIL_USER, 
-    pass: process.env.EMAIL_PASS, 
-  },
-  family: 4            // 👈 Keep this to prevent IPv6 lookups!
-});
+// Function to send email via Brevo HTTP API (Bypasses Render's firewall)
+const sendOtpEmail = async (userEmail, otpCode) => {
+  try {
+    const response = await fetch('https://api.brevo.com/v3/smtp/email', {
+      method: 'POST',
+      headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
+        'api-key': process.env.BREVO_API_KEY
+      },
+      body: JSON.stringify({
+        sender: { 
+          email: "smartiq.farm@gmail.com", // You can leave this as-is, or use your own
+          name: "SmartIQ Cloud" 
+        },
+        to: [{ email: userEmail }],
+        subject: "Your SmartIQ Verification Code",
+        htmlContent: `
+          <div style="font-family: Arial, sans-serif; text-align: center; padding: 30px; background-color: #f2fafd; border-radius: 10px; max-width: 500px; margin: auto;">
+            <h2 style="color: #0b6e8a; margin-top: 0;">🌱 Welcome to SmartIQ</h2>
+            <p style="color: #4d7d92; font-size: 16px;">Your 6-digit verification code is:</p>
+            <div style="background-color: white; padding: 15px; border-radius: 8px; margin: 20px 0; border: 1px solid #b8dcea;">
+              <h1 style="letter-spacing: 6px; color: #0b6e8a; margin: 0; font-size: 32px;">${otpCode}</h1>
+            </div>
+            <p style="color: #4d7d92; font-size: 14px;">This code will expire in 10 minutes.</p>
+          </div>
+        `
+      })
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      console.error("Brevo API Error:", errorData);
+      throw new Error("Failed to send email through API");
+    }
+
+    console.log(`✅ OTP successfully sent via Brevo API to ${userEmail}`);
+  } catch (error) {
+    console.error("Email sending failed:", error);
+    throw error;
+  }
+};
 
 // Helper to generate a 6-digit number
 const generateOTP = () =>
@@ -49,29 +79,8 @@ router.post("/register", async (req, res) => {
     }
     await user.save();
 
-    // Send a professional-looking, spam-resistant email
-    await transporter.sendMail({
-      from: `"🌱 SmartIQ Security" <${process.env.EMAIL_USER}>`, // Adds a nice sender name instead of just the email address
-      to: email,
-      subject: "SmartIQ - Verify Your Account",
-      text: `Welcome to SmartIQ! Your verification OTP is: ${otp}. It expires in 10 minutes.`,
-      html: `
-        <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 10px;">
-          <h2 style="color: #0b6e8a; border-bottom: 2px solid #edf6fb; padding-bottom: 10px;">🌱 SmartIQ Cloud</h2>
-          <p style="color: #334155; font-size: 16px;">Hello,</p>
-          <p style="color: #334155; font-size: 16px;">Please use the verification code below to complete your registration. This code will expire in exactly 10 minutes.</p>
-          
-          <div style="background-color: #f8fafc; padding: 20px; text-align: center; border-radius: 8px; margin: 24px 0;">
-            <span style="font-size: 32px; font-weight: bold; letter-spacing: 6px; color: #0f172a;">${otp}</span>
-          </div>
-          
-          <p style="color: #64748b; font-size: 14px;">If you did not request this email, please ignore it. Your account is safe.</p>
-          
-          <hr style="border: none; border-top: 1px solid #e2e8f0; margin-top: 30px;" />
-          <p style="color: #94a3b8; font-size: 12px; text-align: center;">SmartIQ Agricultural Analytics Dashboard</p>
-        </div>
-      `,
-    });
+    // 👉 FIX: Call the new API function instead of Nodemailer!
+    await sendOtpEmail(email, otp);
 
     res.status(201).json({ message: "OTP sent to email. Please verify." });
   } catch (err) {
@@ -136,12 +145,8 @@ router.post("/forgot-password", async (req, res) => {
     user.otpExpiry = Date.now() + 10 * 60 * 1000;
     await user.save();
 
-    await transporter.sendMail({
-      from: process.env.EMAIL_USER,
-      to: email,
-      subject: "SmartIQ - Password Reset OTP",
-      text: `Your password reset OTP is: ${user.otp}. It expires in 10 minutes.`,
-    });
+    // 👉 FIX: Call the new API function instead of Nodemailer!
+    await sendOtpEmail(email, user.otp);
 
     res.json({ message: "Password reset OTP sent." });
   } catch (err) {
