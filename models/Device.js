@@ -6,7 +6,8 @@ const DeviceSchema = new mongoose.Schema({
   ownerId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
   name: { type: String, default: 'Smart Node' },
   createdAt: { type: Date, default: Date.now },
-  thinkspeakChannel: { type: String, default: '3288449' }
+  thinkspeakChannel: { type: String, default: '' },
+  thinkspeakReadKey: { type: String, default: '' } // <-- Added this line
 });
 
 module.exports = mongoose.model('Device', DeviceSchema);
