@@ -10,11 +10,15 @@ const router = express.Router();
 
 // Email Transporter Setup - This uses the .env variables you just created!
 const transporter = nodemailer.createTransport({
-  service: "gmail",
+  host: 'smtp.gmail.com',
+  port: 465,
+  secure: true,
   auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS,
+    user: process.env.EMAIL_USER, // Your email
+    pass: process.env.EMAIL_PASS, // Your App Password
   },
+  // THE MAGIC FIX: Forces Nodemailer to use IPv4 instead of IPv6
+  family: 4
 });
 
 // Helper to generate a 6-digit number
