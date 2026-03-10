@@ -17,7 +17,13 @@ const server = http.createServer(app);
 const wss = new WebSocket.Server({ server });
 
 // Middleware
-app.use(cors());
+// Middleware
+app.use(cors({
+  origin: ['https://karthikeyan-a-s.github.io', 'http://localhost:5173'], // Allows your GitHub Pages and local testing
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Origin', 'X-Requested-With', 'Content-Type', 'Accept', 'Authorization'],
+  credentials: true
+}));
 app.use(express.json());
 
 // API Endpoints
