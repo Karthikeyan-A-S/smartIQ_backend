@@ -20,7 +20,7 @@ const sendOtpEmail = async (userEmail, otpCode) => {
       body: JSON.stringify({
         sender: { 
           email: "smartiq.farm@gmail.com", // You can leave this as-is, or use your own
-          name: "SmartIQ Cloud" 
+          name: "SmartIQ" 
         },
         to: [{ email: userEmail }],
         subject: "Your SmartIQ Verification Code",
