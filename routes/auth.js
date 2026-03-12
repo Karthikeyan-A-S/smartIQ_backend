@@ -190,7 +190,8 @@ router.delete("/delete-account", authenticateToken, async (req, res) => {
         .json({ error: "Incorrect password. Deletion cancelled." });
 
     // Unlink all devices owned by this user
-    await Device.updateMany({ ownerId: req.user.id }, { ownerId: null });
+    await Device.deleteMany({ ownerId: req.user.id });
+    // await Device.updateMany({ ownerId: req.user.id }, { ownerId: null });
 
     // Delete the user
     await User.findByIdAndDelete(req.user.id);

@@ -5,7 +5,7 @@ const authenticateToken = require("../middleware/authenticateToken");
 
 const router = express.Router();
 
-// 1. CREATE A BRAND NEW DEVICE FROM DASHBOARD
+// CREATE A BRAND NEW DEVICE FROM DASHBOARD
 router.post("/create", authenticateToken, async (req, res) => {
   try {
     const { name, token, thinkspeakChannel, thinkspeakReadKey, thinkspeakWriteKey } = req.body;
@@ -36,7 +36,7 @@ router.post("/create", authenticateToken, async (req, res) => {
   }
 });
 
-// 2. CLAIM AN EXISTING RASPBERRY PI
+// CLAIM AN EXISTING RASPBERRY PI
 router.post("/claim", authenticateToken, async (req, res) => {
   try {
     const { deviceId, deviceToken } = req.body;
@@ -68,8 +68,73 @@ router.post("/unlink", authenticateToken, async (req, res) => {
     res.status(500).json({ error: "Server error while deleting device." });
   }
 });
+// UPDATE DEVICE PARAMETERS
+router.put("/update", authenticateToken, async (req, res) => {
+  try {
+    const { deviceId, name, thinkspeakChannel, thinkspeakReadKey, thinkspeakWriteKey } = req.body;
+    
+    // Find the device to ensure the user actually owns it before editing
+    const device = await Device.findOne({ id: deviceId, ownerId: req.user.id });
 
-// 4. GET USER'S DEVICES
+    if (!device) return res.status(404).json({ error: "Device not found or not owned by you." });
+
+    // Update fields if they were provided in the request
+    if (name !== undefined) device.name = name;
+    if (thinkspeakChannel !== undefined) device.thinkspeakChannel = thinkspeakChannel;
+    if (thinkspeakReadKey !== undefined) device.thinkspeakReadKey = thinkspeakReadKey;
+    if (thinkspeakWriteKey !== undefined) device.thinkspeakWriteKey = thinkspeakWriteKey;
+
+    await device.save();
+    res.json({ message: "Device updated successfully", device });
+  } catch (err) {
+    console.error("Update error:", err);
+    res.status(500).json({ error: "Server error while updating device." });
+  }
+});
+
+// PERMANENTLY DELETE DEVICE FROM DATABASE
+router.delete("/delete", authenticateToken, async (req, res) => {
+  try {
+    const { deviceId } = req.body;
+    
+    // Find and permanently remove the document from the database
+    const device = await Device.findOneAndDelete({ id: deviceId, ownerId: req.user.id });
+
+    if (!device) return res.status(404).json({ error: "Device not found or not owned by you." });
+
+    res.json({ message: "Device permanently deleted." });
+  } catch (err) {
+    console.error("Delete error:", err);
+    res.status(500).json({ error: "Server error while deleting device." });
+  }
+});
+
+// FETCH PI CONFIGURATION
+// The Raspberry Pi calls this on boot to get its ThingSpeak key
+router.post("/pi-config", async (req, res) => {
+  try {
+    const { deviceId, token } = req.body;
+    
+    // Authenticate the hardware using its ID and Security Token
+    const device = await Device.findOne({ id: deviceId, token: token });
+    
+    if (!device) {
+      return res.status(401).json({ error: "Hardware Unauthorized. Invalid ID or Token." });
+    }
+
+    // Send back the configuration
+    res.json({
+      thinkspeakWriteKey: device.thinkspeakWriteKey || "",
+      name: device.name
+    });
+
+  } catch (err) {
+    console.error("Config fetch error:", err);
+    res.status(500).json({ error: "Server error fetching Pi config." });
+  }
+});
+
+// GET USER'S DEVICES
 router.get("/", authenticateToken, async (req, res) => {
   try {
     const devices = await Device.find({ ownerId: req.user.id });
