@@ -30,14 +30,14 @@ const CustomCropSchema = new mongoose.Schema(
 
 // Convenience virtual: resolve dripSpeedLevel -> actual pump percentage
 CustomCropSchema.virtual("dripSpeed").get(function () {
-  const map = { 1: 40, 2: 60, 3: 80 };
-  return map[this.dripSpeedLevel] ?? 60;
+  const map = { 1: 15, 2: 25, 3: 35 };
+  return map[this.dripSpeedLevel] ?? 25;
 });
 
 // Convenience virtual: resolve surfaceSpeedLevel -> actual pump percentage
 CustomCropSchema.virtual("surfaceSpeed").get(function () {
-  const map = { 1: 40, 2: 70, 3: 100 };
-  return map[this.surfaceSpeedLevel] ?? 70;
+  const map = { 1: 70, 2: 85, 3: 100 };
+  return map[this.surfaceSpeedLevel] ?? 85;
 });
 
 CustomCropSchema.set("toJSON", { virtuals: true });

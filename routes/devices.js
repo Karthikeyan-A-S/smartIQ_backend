@@ -11,7 +11,7 @@ router.post("/create", authenticateToken, async (req, res) => {
     const { name, token, thinkspeakChannel, thinkspeakReadKey, thinkspeakWriteKey } = req.body;
 
     // Generate a unique 8-character hex ID (e.g., PI_A1B2C3D4)
-    const newDeviceId = "PI_" + crypto.randomBytes(4).toString("hex").toUpperCase();
+    const newDeviceId = "IQ_" + crypto.randomBytes(4).toString("hex").toUpperCase();
 
     const newDevice = new Device({
       id: newDeviceId, 
@@ -80,6 +80,7 @@ router.put("/update", authenticateToken, async (req, res) => {
 
     // Update fields if they were provided in the request
     if (name !== undefined) device.name = name;
+    if (token !== undefined) device.token = token;
     if (thinkspeakChannel !== undefined) device.thinkspeakChannel = thinkspeakChannel;
     if (thinkspeakReadKey !== undefined) device.thinkspeakReadKey = thinkspeakReadKey;
     if (thinkspeakWriteKey !== undefined) device.thinkspeakWriteKey = thinkspeakWriteKey;
